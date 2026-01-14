@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">BloodPressureTracker</string>
+    <string name="app_name">스마트 혈압 수첩 v1.0</string>
+    <string name="developer_info">개발자: kitwlsh@gmail.com</string>
 </resources>

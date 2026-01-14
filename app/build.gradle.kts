@@ -68,6 +68,11 @@ dependencies {
     // Graph
     implementation(libs.mp.android.chart)
 
+    // Retrofit (웹 분석 API 통신용 - 추가됨)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

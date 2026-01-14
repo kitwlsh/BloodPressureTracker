@@ -4,50 +4,131 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FFFFFF"
     tools:context=".MainActivity">
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="80dp"
+        app:layout_constraintDimensionRatio="4:3"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/guideBox"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:background="@drawable/bg_guide_line"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder"
+        app:layout_constraintStart_toStartOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
+    <TextView
+        android:id="@+id/guideText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="사각형 안에 계기판을 맞춰주세요"
+        android:textColor="#00FF00"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"
+        android:background="#A0000000"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="@id/guideBox"
+        app:layout_constraintStart_toStartOf="@id/guideBox"
+        app:layout_constraintEnd_toEndOf="@id/guideBox" />
 
     <LinearLayout
         android:id="@+id/buttonPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
+        android:orientation="vertical"
         android:padding="8dp"
-        app:layout_constraintBottom_toBottomOf="@id/viewFinder">
+        app:layout_constraintTop_toBottomOf="@id/viewFinder">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btnCapture"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                android:text="혈압 촬영" />
+            <Button
+                android:id="@+id/btnGallery"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                android:text="갤러리 선택" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btnGraph"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                android:text="변화 그래프" />
+            <Button
+                android:id="@+id/btnDoctorRecord"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                android:text="의사용 기록표" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btnExportCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:text="CSV 저장" />
+            <Button
+                android:id="@+id/btnImportCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:text="CSV 불러오기" />
+        </LinearLayout>
+
+        <!-- 추가: 전체 삭제 버튼 -->
         <Button
-            android:id="@+id/btnCapture"
-            android:layout_width="wrap_content"
+            android:id="@+id/btnDeleteAll"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
-            android:text="촬영" />
-
-        <Button
-            android:id="@+id/btnGallery"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="갤러리" />
-
-        <Button
-            android:id="@+id/btnGraph"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="그래프" />
+            android:text="모든 기록 삭제"
+            android:textColor="#D32F2F"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:paddingBottom="32dp"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/viewFinder" />
+        app:layout_constraintTop_toBottomOf="@id/buttonPanel" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

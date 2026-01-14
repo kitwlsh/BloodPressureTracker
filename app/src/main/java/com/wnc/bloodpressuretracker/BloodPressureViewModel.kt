@@ -14,7 +14,15 @@ class BloodPressureViewModel(application: Application) : AndroidViewModel(applic
         dao.insert(record)
     }
 
+    fun update(record: BloodPressureRecord) = viewModelScope.launch {
+        dao.insert(record)
+    }
+
     fun delete(id: Long) = viewModelScope.launch {
         dao.delete(id)
+    }
+
+    fun deleteAll() = viewModelScope.launch {
+        dao.deleteAll()
     }
 }

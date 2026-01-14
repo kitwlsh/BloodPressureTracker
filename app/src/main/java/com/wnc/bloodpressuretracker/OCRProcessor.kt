@@ -15,12 +15,16 @@ class OCRProcessor {
     interface OnResultListener {
         fun onSuccess(systolic: Int, diastolic: Int, pulse: Int, timeStr: String?)
         fun onFailure(e: Exception)
+        fun onDebugText(fullText: String) // 추가: 인식된 전체 텍스트 확인용
     }
 
     fun processImage(bitmap: Bitmap, listener: OnResultListener) {
         val image = InputImage.fromBitmap(bitmap, 0)
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
+                // 인식된 모든 텍스트를 디버그용으로 먼저 전달
+                listener.onDebugText(visionText.text)
+                
                 try {
                     analyzeLayout(visionText, listener)
                 } catch (e: Exception) {
@@ -37,7 +41,7 @@ class OCRProcessor {
         val timeRegex = Regex("([01]?[0-9]|2[0-3])[:.]([0-5][0-9])")
         var timeStr: String? = null
 
-        // 1. 모든 개별 단어/기호 수집
+        // 1. 모든 개별 단어/기호 수집 및 세그먼트 오인식 문자 변환
         for (block in visionText.textBlocks) {
             for (line in block.lines) {
                 val lineText = line.text.trim().replace(" ", "")
@@ -48,11 +52,18 @@ class OCRProcessor {
 
                 for (element in line.elements) {
                     val box = element.boundingBox ?: continue
-                    // 디지털 숫자 특유의 오인식 문자들을 숫자로 미리 변환
+                    
+                    // 7세그먼트 디지털 숫자 특유의 오인식 문자들을 숫자로 매핑 강화
                     val cleaned = element.text.trim()
-                        .replace("I", "1").replace("l", "1").replace("|", "1")
-                        .replace("S", "5").replace("B", "8").replace("O", "0")
-                        .replace("g", "9").replace("q", "9").replace("A", "4")
+                        .replace("I", "1").replace("l", "1").replace("|", "1").replace("]", "1").replace("[", "1")
+                        .replace("S", "5").replace("s", "5")
+                        .replace("B", "8").replace("E", "8")
+                        .replace("O", "0").replace("D", "0").replace("Q", "0").replace("U", "0")
+                        .replace("g", "9").replace("q", "9")
+                        .replace("A", "4").replace("H", "4")
+                        .replace("G", "6").replace("b", "6")
+                        .replace("Z", "2").replace("z", "2")
+                        .replace("T", "7")
                     
                     val digits = cleaned.filter { it.isDigit() }
                     if (digits.isNotEmpty()) {
@@ -64,7 +75,6 @@ class OCRProcessor {
 
         // 2. 가로로 인접하고 높이가 비슷한 숫자 조각들을 하나로 합치기
         val mergedLines = mutableListOf<TextLineInfo>()
-        // 위에서 아래로 정렬하여 처리
         val sortedElements = allElements.sortedBy { it.rect.top }
 
         for (element in sortedElements) {
@@ -74,7 +84,8 @@ class OCRProcessor {
                 val yDiff = abs(line.rect.centerY() - element.rect.centerY())
                 val xDiff = element.rect.left - line.rect.right
                 
-                if (yDiff < line.rect.height() * 0.7 && xDiff < line.rect.height() * 1.5) {
+                // 세그먼트 숫자는 조각나서 인식될 가능성이 크므로 가로 허용 오차를 조금 더 넓힘
+                if (yDiff < line.rect.height() * 0.8 && xDiff < line.rect.height() * 1.8) {
                     line.text += element.text
                     line.rect.union(element.rect)
                     merged = true
@@ -86,31 +97,28 @@ class OCRProcessor {
             }
         }
 
-        // 3. 합쳐진 결과 중 '진짜 숫자' 후보군 필터링 (2~3자리 숫자)
+        // 3. 합쳐진 결과 중 '진짜 숫자' 후보군 필터링 (혈압 범위 체크 추가)
         val finalCandidates = mergedLines
             .filter { 
                 val d = it.text.filter { c -> c.isDigit() }
-                d.length in 2..3 && d.toInt() > 10 // 10 이하는 노이즈로 간주
+                // 혈압 데이터는 보통 2~3자리이며 30~250 사이임
+                d.length in 2..3 && d.toIntOrNull()?.let { v -> v in 30..250 } ?: false
             }
-            .sortedByDescending { it.rect.height() } // 글자 크기(높이)가 큰 순서대로
-            .take(3) // 가장 큰 3개 뭉치 선택
-            .sortedBy { it.rect.top } // 다시 위에서 아래 순서로 배치 (SYS-DIA-PULSE)
+            .sortedByDescending { it.rect.height() } // 글자 크기가 큰 순서대로 (혈압 수치가 보통 가장 큼)
+            .take(3) 
+            .sortedBy { it.rect.top } // 위(SYS) -> 중간(DIA) -> 아래(PULSE) 순서
 
-        Log.d("OCRProcessor", "Final 3: ${finalCandidates.joinToString { "${it.text}(h:${it.rect.height()})" }}")
+        Log.d("OCRProcessor", "Final Candidates: ${finalCandidates.joinToString { "${it.text}(h:${it.rect.height()})" }}")
 
-        if (finalCandidates.size >= 3) {
-            listener.onSuccess(
-                finalCandidates[0].text.toInt(),
-                finalCandidates[1].text.toInt(),
-                finalCandidates[2].text.toInt(),
-                timeStr
-            )
-        } else if (finalCandidates.size == 2) {
-            // 맥박을 못 찾은 경우
-            listener.onSuccess(finalCandidates[0].text.toInt(), finalCandidates[1].text.toInt(), 0, timeStr)
+        if (finalCandidates.size >= 2) {
+            val sys = finalCandidates[0].text.toInt()
+            val dia = finalCandidates[1].text.toInt()
+            val pulse = if (finalCandidates.size >= 3) finalCandidates[2].text.toInt() else 0
+            
+            listener.onSuccess(sys, dia, pulse, timeStr)
         } else {
             val debug = mergedLines.joinToString { "${it.text}(h:${it.rect.height()})" }
-            listener.onFailure(Exception("데이터 인식 실패 (후보: $debug)"))
+            listener.onFailure(Exception("숫자를 충분히 찾지 못했습니다. (후보: $debug)"))
         }
     }
 
